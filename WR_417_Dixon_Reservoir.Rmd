@@ -1,0 +1,65 @@
+---
+title: "WR_417_Dixon_Reservoir"
+author: "Lynette Schwanger"
+date: "2026-09-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(sf)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+```
+
+```{r}
+wp <- st_read("wr_417_dixon_reservoir.geojson")
+```
+
+```{r}
+wp <- wp %>%
+  mutate(
+    transect = str_extract(title, "^T\\d+"),
+    point    = str_extract(title, "(?<=_)\\d+")
+  ) %>%
+  select(title, transect, point, elevation, geometry)
+
+print(wp)
+```
+
+```{r}
+ggplot(wp) +
+  geom_sf(aes(color = transect), size = 3) +
+  scale_color_manual(values = c(
+    "T1" = "deepskyblue3",
+    "T2" = "forestgreen",
+    "T3" = "orange"
+  )) +
+  labs(
+    title = "WR 417 Dillon Dam - Sampling Waypoints",
+    color = "Transect"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+library(leaflet)
+
+pal <- colorFactor(palette = c("deepskyblue3", "forestgreen", "orange"), 
+                   domain = c("T1", "T2", "T3"))
+
+leaflet(wp) %>%
+  addProviderTiles(providers$Esri.WorldImagery, group = "Esri") %>%
+  addProviderTiles(providers$USGS.USImageryTopo, group = "USGS") %>%
+  addCircleMarkers(
+    color = ~pal(transect),
+    radius = 6,
+    stroke = FALSE,
+    fillOpacity = 0.9,
+    label = ~paste0(title, " — ", elevation, " m")
+  ) %>%
+  addLegend(pal = pal, values = ~transect, title = "Transect")
+```
+
+
+
