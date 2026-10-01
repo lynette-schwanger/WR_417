@@ -45,21 +45,50 @@ ggplot(wp) +
 ```{r}
 library(leaflet)
 
-pal <- colorFactor(palette = c("deepskyblue3", "forestgreen", "orange"), 
+pal <- colorFactor(palette = c("#0072B2", "#009E73", "#E69F00"), 
                    domain = c("T1", "T2", "T3"))
 
 leaflet(wp) %>%
-  addProviderTiles(providers$Esri.WorldImagery, group = "Esri") %>%
-  addProviderTiles(providers$USGS.USImageryTopo, group = "USGS") %>%
+  addProviderTiles(providers$OpenStreetMap, group = "OpenStreetMap") %>%
+  #addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
+  #addProviderTiles(providers$Esri.WorldImagery, group = "Esri") %>%
+  #addProviderTiles(providers$USGS.USImageryTopo, group = "USGS") %>%
   addCircleMarkers(
     color = ~pal(transect),
     radius = 6,
     stroke = FALSE,
-    fillOpacity = 0.9,
+    fillOpacity = 1,
     label = ~paste0(title, " — ", elevation, " m")
   ) %>%
-  addLegend(pal = pal, values = ~transect, title = "Transect")
+  addLegend(pal = pal, values = ~transect, title = "Transect", opacity = 1)
 ```
 
+```{r}
+leaflet(wp) %>%
+  #addProviderTiles(providers$OpenStreetMap, group = "OpenStreetMap") %>%
+  #addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
+  addProviderTiles(providers$Esri.WorldImagery, group = "Esri") %>%
+  #addProviderTiles(providers$USGS.USImageryTopo, group = "USGS") %>%
+  addCircleMarkers(
+    color = ~pal(transect),
+    radius = 6,
+    stroke = FALSE,
+    fillOpacity = 1,
+    label = ~paste0(title, " — ", elevation, " m")) %>%
+  addLegend(pal = pal, values = ~transect, title = "Transect", opacity = 1) %>%
+  addLabelOnlyMarkers(
+    lng = -105.1417, lat = 40.55227,  
+    label = "Dixon Reservoir",
+    labelOptions = labelOptions(
+      noHide = TRUE,               
+      direction = "center",        
+      textOnly = TRUE,             
+      style = list(
+        "color" = "white",         
+        "font-weight" = "bold", 
+        "font-size" = "14px"
+      )
+    ))
+```
 
 
