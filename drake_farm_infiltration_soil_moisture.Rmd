@@ -19,7 +19,7 @@ vwc_historical <- read_csv("data/VWC_historical.csv")
 daily_vwc_precip <- read_csv("data/drake_2026_p_sm.csv")
 ```
 
-# deliverable 1.1: 2026 VWC % by site 
+# deliverable 1a: 2026 VWC % by site 
 ```{r}
 ggplot(vwc_2026, aes(x = Site, y = VWC_point_average)) +
   geom_point(size = 3, color = "steelblue") +
@@ -29,14 +29,15 @@ ggplot(vwc_2026, aes(x = Site, y = VWC_point_average)) +
   labs(x = "Site", 
        y = "Volumetric Water Content (%)",
        title = "Drake Farm 2026 - Soil Moisture",
-       caption = "Figure 1: Volumetric water content at four sites at Drake Farm. Each site was divided into three points, with three readings taken at each point. Blue points are point averages\nand black diamonds are site means. Error bars show ± 1 SE.") +
+       caption = "Figure 1: Volumetric water content at four sites at Drake Farm. Sites are ordered from lowest (A) to highest (D) elevation. Each site was divided into\nthree points, with three readings taken at each point. Blue points are point averages and black diamonds are site means. Error bars show ± 1 SE.") +
   theme_classic() +
   theme(panel.grid.major.y = element_line(color = "grey95"),
-        plot.caption = element_text(hjust = 0),
+        plot.title = element_text(size = 16, face = "bold"),
+        plot.caption = element_text(hjust = 0, size = 11),
       plot.caption.position = "plot")
 ```
 
-# deliverable 1.2: 2026 K by site 
+# deliverable 1b: 2026 K by site 
 ```{r}
 k_2026 <- k_data %>%
   filter(Year == 2026)
@@ -50,10 +51,11 @@ ggplot(k_2026, aes(x = Site, y = K_cm_day)) +
   labs(x = "Site",
        y = "Hydraulic Conductivity (K cm/day)",
        title = "Drake Farm 2026 - Hydraulic Conductivity",
-       caption = "Figure 2: Saturated hydraulic conductivity at four sites at Drake Farm. Blue points are individual point measurements and black diamonds are site means.\nError bars show ± 1 SE.") +
+       caption = "Figure 2: Saturated hydraulic conductivity at four sites at Drake Farm. Sites are ordered from lowest (A) to highest (D) elevation. Blue points are\nindividual point measurements and black diamonds are site means. Error bars show ± 1 SE. While negative K values are not physically possible,\nthe negative values measured at site C are a result of a calculation correction which subtracts estimated lateral flow to isolate downward flow.\nAt site C, lateral flow exceeded the correction, resulting in negative values.") +
   theme_classic() +
   theme(panel.grid.major.y = element_line(color = "grey95"),
-        plot.caption = element_text(hjust = 0),
+        plot.title = element_text(size = 16, face = "bold"),
+        plot.caption = element_text(hjust = 0, size = 11),
         plot.caption.position = "plot")
 ```
 
@@ -64,17 +66,18 @@ ggplot() +
            aes(x = day_of_year, y = P_mm), fill = "grey75") +
   geom_line(data = daily_vwc_precip, aes(x = day_of_year, y = VWC_daily, color = site)) +
   facet_wrap(~ year, ncol = 1) +
-  scale_colour_manual(values = c("CRS1" = "darkorange3", "CRS2" = "steelblue")) +
+  scale_colour_manual(values = c("CRS1" = "darkblue", "CRS2" = "steelblue")) +
   scale_x_continuous(breaks = seq(210, 280, by = 10)) +
   scale_y_continuous(name = "Volumetric Water Content (%)",
                      sec.axis = sec_axis(~ ., name = "Daily precipitation (mm)")) +
   labs(x = "Day of Year",
        colour = "Sensor",
-       title = "Drake Farm - Precipitation and Soil Moisture 2024–2026",
-       caption = "Figure 3: Daily precipitation (represented by grey bars) and daily mean volumetric water content (represented by lines) at Drake Farm. Soil moisture was measured by two\ncosmic ray sensors, each averaging VWC over a 200 m radius and calibrated to 0–15 cm depth. CRS1 is closest to Site A and CRS2 is closest to Site D.") +
+       title = "Drake Farm - Precipitation and Soil Moisture 2024-2026",
+       caption = "Figure 3: Daily precipitation (represented by grey bars) and daily mean volumetric water content (represented by lines) at Drake Farm. Soil moisture was measured by\ntwo cosmic ray sensors, each averaging VWC over a 200 m radius and calibrated to 0-15 cm depth. CRS1 is closest to Site A and CRS2 is closest to Site D.") +
   theme_classic() +
   theme(panel.grid.major.y = element_line(color = "grey95"),
-        plot.caption = element_text(hjust = 0),
+        plot.title = element_text(size = 16, face = "bold"),
+        plot.caption = element_text(hjust = 0, size = 11),
         plot.caption.position = "plot")
 ```
  
@@ -111,12 +114,14 @@ vwc_table %>%
   theme_box() %>%
   flextable::align(align = "left", part = "all") %>%
   add_footer_lines("Table 1: Comparison of field-measured and cosmic ray sensor volumetric water content at Drake Farm on the class sampling date in each year. Measured values are the mean of four site averages. Cosmic ray values are the mean of the daily averages from two sensors, CRS1 and CRS2, which each integrate VWC over a 200 m radius and 0-15 cm depth.") %>%
+  fontsize(size = 9, part = "footer") %>%
   autofit()
 ```
 
 #deliverable 5
 ```{r}
-ggplot(k_data, aes(x = factor(Year), y = K_cm_day)) +
+ggplot(filter(k_data, !(Year == 2026 & K_cm_day < 0)), 
+       aes(x = factor(Year), y = K_cm_day)) +
   geom_boxplot(outlier.shape = NA, 
                fill = "steelblue", alpha = .6) +
   geom_jitter(width = 0.1, height = 0, size = 2, colour = "black") +
@@ -124,11 +129,22 @@ ggplot(k_data, aes(x = factor(Year), y = K_cm_day)) +
   labs(x = "Year",
        y = "Hydraulic Conductivity (K cm/day)",
        title = "Drake Farm - Hydraulic Conductivity by Year",
-       caption = "Figure 4: Hydraulic conductivity measured by each year's class at Drake Farm, across all sites and sampling points.") +
+       caption = "Figure 4: Hydraulic conductivity measured by each year's class at Drake Farm, across all sites and sampling points. Two negative K values from 2026\nwere excluded.") +
   theme_classic() +
   theme(panel.grid.major.y = element_line(colour = "grey95"),
-        plot.caption = element_text(hjust = 0),
+        plot.title = element_text(size = 16, face = "bold"),
+        plot.caption = element_text(hjust = 0, size = 11),
         plot.caption.position = "plot")
+```
+
+```{r}
+filter(k_data, !(Year == 2026 & K_cm_day < 0)) %>%
+  group_by(Year) %>%
+  summarise(mean   = mean(K_cm_day),
+            median = median(K_cm_day),
+            min    = min(K_cm_day),
+            max    = max(K_cm_day),
+            n      = n())
 ```
 
 
