@@ -1,0 +1,153 @@
+---
+title: "precip_measurements"
+author: "Lynette Schwanger"
+date: "2026-11-02"
+output: html_document
+---
+
+```{r}
+source("setup.R")
+```
+
+```{r}
+fc_ws <- read_csv("data/FCws_WR417_2026.csv")
+
+fc_class <- read_csv("data/WR417 Precipitation Measurements 2026 - Datasheet.csv")
+
+class_meta <- read_csv("data/WR417 Precipitation Measurements 2026 - Metadata.csv")
+```
+
+```{r}
+fc_class_tidy <- fc_class |>
+  transmute(
+    sheet_row = row_number() + 1,  
+    site = str_squish(Location_name),
+    date = mdy(str_replace(Date, "20206$", "2026")),  
+    time_obs = Time,
+    is_trace = P_in %in% "T" | P_mm %in% "T",
+    P_in = if_else(P_in %in% "T", 0, parse_double(P_in, na = c("", "NA", "T"))),
+    P_mm_reported = parse_double(P_mm, na = c("", "NA", "T")),
+    quality = Quality,
+    weather = Weather,
+    comments = Comments,
+    source = "class"
+  )
+
+fc_class_tidy |>
+  summarize(
+    n_rows = n(),
+    n_sites = n_distinct(site),
+    n_bad_dates = sum(is.na(date)),
+    n_trace = sum(is_trace),
+    n_missing_P_in = sum(is.na(P_in)),
+    first_date = min(date, na.rm = TRUE),
+    last_date = max(date, na.rm = TRUE)
+  )
+```
+
+```{r}
+fc_name <- "Fort Collins Weather Station"
+
+fc_ws_tidy <- fc_ws |>
+  transmute(
+    site = fc_name,
+    date = mdy(date),
+    P_in,
+    is_trace = FALSE,
+    source = "fc_station"
+  )
+
+precip_all <- bind_rows(fc_class_tidy, fc_ws_tidy) |>
+  arrange(site, date, time_obs)
+
+station_summary <- precip_all |>
+  group_by(site) |>
+  summarize(
+    n_rows = n(),
+    n_days = n_distinct(date),
+    first_date = min(date),
+    last_date = max(date),
+    .groups = "drop"
+  )
+
+nrow(precip_all)
+station_summary |> print(n = Inf)
+```
+
+```{r}
+class_meta_tidy <- class_meta |>
+  transmute(
+    site = Location_name |> str_remove_all('"') |> str_squish(),
+    site = case_when(
+      site == "Cloth Sample" ~ "Cloth sample",
+      site == "Lake Street" ~ "Lake Landing",  # assumption: confirm this match
+      site == "FOCO_Station_CSU" ~ fc_name,
+      .default = site
+    ),
+    lat = Lat,
+    lon = -abs(Long),  # FC station was entered as +105.09; Colorado longitudes are negative
+    am_pm = str_to_upper(`AM or PM measurments`),
+    gauge = str_squish(Gauge),
+    units = str_squish(Units),
+    precision = Precision,
+    height_above_ground = `Height above ground (ft)`,
+    opening_area = `Opening area (in^2)`,
+    install_comments = Install_comments
+  )
+
+stations <- class_meta_tidy |>
+  left_join(
+    station_summary |> select(site, n_days, first_date, last_date),
+    by = "site"
+  ) |>
+  mutate(
+    source = if_else(site == fc_name, "fc_station", "class"),
+    has_data = !is.na(n_days)
+  )
+
+# Should return 0 rows: sites in the data with no metadata match
+station_summary |>
+  anti_join(class_meta_tidy, by = "site")
+
+# Should return 0 rows: stations with missing or out-of-state coordinates
+stations |>
+  filter(is.na(lat) | is.na(lon) | !between(lat, 37, 41) | !between(lon, -109.05, -102.05))
+
+# Should return 1 row: Howes St. Waterfall
+stations |>
+  filter(!has_data) |>
+  select(site, lat, lon)
+
+nrow(stations)
+```
+
+```{r}
+stations_fc <- stations |>
+  filter(site != "Leadville 0.2 NW") |>
+  mutate(point_color = if_else(source == "fc_station", "green", "navy"))
+
+station_map <- leaflet(stations_fc) |>
+  #addTiles() |>
+  #addProviderTiles(providers$Esri.WorldGrayCanvas) |>
+  #addProviderTiles(providers$Esri.WorldTopoMap) |>
+  addTiles(options = tileOptions(opacity = 0.5)) |>
+  addCircleMarkers(
+    lng = ~lon,
+    lat = ~lat,
+    color = ~point_color,
+    radius = 5,
+    stroke = FALSE,
+    fillOpacity = 0.9,
+    label = ~site
+  ) |>
+  addLegend(
+    position = "bottomright",
+    colors = c("navy", "green"),
+    labels = c("Class Station", "Fort Collins Weather Station"),
+    opacity = 0.9
+  ) |>
+  addScaleBar(position = "bottomleft")
+
+station_map
+```
+

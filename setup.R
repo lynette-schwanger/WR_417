@@ -39,6 +39,7 @@ packages <- c(
   "jsonlite",
   "kableExtra",
   "knitr",
+  "leaflet",
   "leafem",
   "lwgeom",
   "maptiles",
